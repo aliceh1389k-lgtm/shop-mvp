@@ -1,0 +1,20 @@
+{% load humanize %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ product.title }}</title>
+  </head>
+  <body>
+    <a href="{% url 'catalog:product_list' %}">بازگشت به لیست</a>
+    <h1>{{ product.title }}</h1>
+    <p>{{ product.price_irr|intcomma }} ریال</p>
+    <form method="post" action="{% url 'orders:create' slug=product.slug %}">
+      {% csrf_token %}
+      <button type="submit">خرید</button>
+    </form>
+    {% if product.description %}
+      <p>{{ product.description }}</p>
+    {% endif %}
+  </body>
+</html>

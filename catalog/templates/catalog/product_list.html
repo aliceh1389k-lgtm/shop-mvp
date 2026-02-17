@@ -1,0 +1,26 @@
+
+{% load humanize %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>محصولات</title>
+  </head>
+  <body>
+    <h1>محصولات</h1>
+
+    {% if products %}
+      <ul>
+        {% for p in products %}
+          <li>
+            <a href="{% url 'catalog:product_detail' slug=p.slug %}">{{ p.title }}</a>
+            {{ p.price_irr|intcomma }} ریال
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>هنوز محصولی ثبت نشده.</p>
+    {% endif %}
+  </body>
+</html>
+

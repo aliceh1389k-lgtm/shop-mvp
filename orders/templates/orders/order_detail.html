@@ -1,0 +1,36 @@
+{% load humanize %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>سفارش {{ order.id }}</title>
+  </head>
+  <body>
+    <a href="{% url 'catalog:product_list' %}">بازگشت به محصولات</a>
+
+    <h1>سفارش</h1>
+    <p><strong>شناسه:</strong> {{ order.id }}</p>
+    <p><strong>وضعیت:</strong> {{ order.status }}</p>
+
+    <h2>آیتم‌ها</h2>
+    {% if items %}
+      <ul>
+        {% for item in items %}
+          <li>
+            {{ item.product.title }} —
+            تعداد: {{ item.quantity }} —
+            قیمت واحد: {{ item.unit_price_irr|intcomma }} ریال —
+            جمع: {{ item.line_total_irr|intcomma }} ریال
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>این سفارش آیتمی ندارد.</p>
+    {% endif %}
+
+    <hr />
+    <p><strong>جمع کل:</strong> {{ computed_total|intcomma }} ریال</p>
+
+    <p>(پرداخت هنوز فعال نشده — مرحله بعدی)</p>
+  </body>
+</html>
