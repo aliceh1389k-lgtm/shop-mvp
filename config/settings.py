@@ -132,13 +132,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import os
 
 # Payments provider switch: "mock" or "stripe"
+import os
+
 PAYMENTS_PROVIDER = os.environ.get("PAYMENTS_PROVIDER", "mock").lower()
 
-# Stripe (test)
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_CURRENCY = os.environ.get("STRIPE_CURRENCY", "usd").lower()
+ZARINPAL_SANDBOX = os.environ.get("ZARINPAL_SANDBOX", "1") == "1"
+ZARINPAL_MERCHANT_ID = os.environ.get("ZARINPAL_MERCHANT_ID", "")
+ZARINPAL_CURRENCY = os.environ.get("ZARINPAL_CURRENCY", "IRR").upper()
 
-# چون قیمت داخلی ما IRR هست ولی Stripe ممکنه IRR رو پشتیبانی نکنه،
-# برای تست، تبدیل می‌کنیم به USD با یک نرخ تستی قابل تنظیم:
-TEST_IRR_PER_USD = int(os.environ.get("TEST_IRR_PER_USD", "500000"))
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")

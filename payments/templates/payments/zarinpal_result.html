@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>نتیجه پرداخت</title>
+  </head>
+  <body>
+    {% if ok %}
+      <h1>پرداخت موفق ✅</h1>
+      <p>سفارش: {{ order.id }}</p>
+      <p>وضعیت سفارش: {{ order.status }}</p>
+      <p>ref_id: {{ order.payment_ref_id }}</p>
+      <a href="{% url 'orders:detail' order_id=order.id %}">بازگشت به سفارش</a>
+      <hr />
+      <pre>{{ verify|safe }}</pre>
+    {% else %}
+      <h1>پرداخت ناموفق/لغو شده ❌</h1>
+      {% if order %}
+        <p>سفارش: {{ order.id }}</p>
+        <p>Status: {{ status }}</p>
+      {% endif %}
+      {% if error %}<p>Error: {{ error }}</p>{% endif %}
+      {% if verify %}<pre>{{ verify|safe }}</pre>{% endif %}
+      <a href="{% url 'catalog:product_list' %}">بازگشت به محصولات</a>
+    {% endif %}
+  </body>
+</html>
