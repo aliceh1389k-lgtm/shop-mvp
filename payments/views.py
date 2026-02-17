@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from orders.models import Order
+from payments.models import PaymentAttempt
+
 
 
 def _zarinpal_urls():
@@ -31,55 +33,77 @@ def _zarinpal_enabled() -> bool:
     merchant_id = getattr(settings, "ZARINPAL_MERCHANT_ID", "")
     return provider == "zarinpal" and bool(merchant_id)
 
+@require_POST
 def start_payment(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    # قفل DB: همزمانی و چند کلیک پشت سر هم را کنترل می‌کنیم
+    with transaction.atomic():
+        order = Order.objects.select_for_update().filter(id=order_id).first()
+        if not order:
+            return render(request, "payments/payment_error.html", {"error": "ORDER_NOT_FOUND"})
 
-    if order.status != Order.Status.PENDING_PAYMENT:
-        return render(request, "payments/payment_error.html", {"order": order})
+        if order.status == Order.Status.PAID:
+            # اگر قبلاً پرداخت شده، دوباره درگاه نرو
+            return redirect("orders:detail", order_id=order.id)
 
-    # fallback to mock if env not configured
-    if not _zarinpal_enabled():
-        return render(request, "payments/payment_mock.html", {"order": order})
+        if order.status != Order.Status.PENDING_PAYMENT:
+            return render(request, "payments/payment_error.html", {"order": order})
 
-    urls = _zarinpal_urls()
-    public_base = getattr(settings, "PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
-    callback_url = f"{public_base}{reverse('payments:zarinpal_callback')}"
+        if not _zarinpal_enabled():
+            return render(request, "payments/payment_mock.html", {"order": order})
 
+        urls = _zarinpal_urls()
 
-    payload = {
-        "merchant_id": settings.ZARINPAL_MERCHANT_ID,
-        "amount": int(order.total_irr),
-        "callback_url": callback_url,
-        "description": f"Order {order.id}",
-        "currency": getattr(settings, "ZARINPAL_CURRENCY", "IRR"),
-        "metadata": {"order_id": str(order.id)},
-    }
+        public_base = getattr(settings, "PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+        callback_url = f"{public_base}{reverse('payments:zarinpal_callback')}"
 
-    headers = {"accept": "application/json", "content-type": "application/json"}
+        # اگر قبلاً authority گرفتیم، دوباره request نزن؛ همان را استفاده کن
+        if order.payment_provider == "zarinpal" and order.payment_session_id:
+            return redirect(f"{urls['startpay']}{order.payment_session_id}", permanent=False)
 
-    try:
-        resp = requests.post(urls["request"], json=payload, headers=headers, timeout=20)
-        data = resp.json()
-    except Exception:
-        return render(request, "payments/payment_error.html", {"order": order, "error": "NETWORK_ERROR"})
+        payload = {
+            "merchant_id": getattr(settings, "ZARINPAL_MERCHANT_ID", ""),
+            "amount": int(order.total_irr),
+            "callback_url": callback_url,
+            "description": f"Order {order.id}",
+            "currency": getattr(settings, "ZARINPAL_CURRENCY", "IRR"),
+            "metadata": {"order_id": str(order.id)},
+        }
 
-    d = data.get("data") or {}
-    code = d.get("code")
+        headers = {"accept": "application/json", "content-type": "application/json"}
 
-    # code=100 means Success and authority is returned
-    if code != 100:
-        return render(request, "payments/payment_error.html", {"order": order, "zarinpal": data})
+        try:
+            resp = requests.post(urls["request"], json=payload, headers=headers, timeout=20)
+            data = resp.json()
+        except Exception:
+            PaymentAttempt.objects.create(
+                order=order,
+                provider="zarinpal",
+                stage=PaymentAttempt.Stage.REQUEST,
+                raw={"error": "NETWORK_ERROR"},
+            )
+            return render(request, "payments/payment_error.html", {"order": order, "error": "NETWORK_ERROR"})
 
-    authority = d.get("authority", "")
-    if not authority:
-        return render(request, "payments/payment_error.html", {"order": order, "error": "NO_AUTHORITY"})
+        d = data.get("data") or {}
+        code = d.get("code")
+        authority = d.get("authority", "")
 
-    order.payment_provider = "zarinpal"
-    order.payment_session_id = authority  # store authority
-    order.save(update_fields=["payment_provider", "payment_session_id"])
+        PaymentAttempt.objects.create(
+            order=order,
+            provider="zarinpal",
+            stage=PaymentAttempt.Stage.REQUEST,
+            authority=authority or "",
+            code=code if isinstance(code, int) else None,
+            raw=data,
+        )
 
-    # Redirect user to StartPay/{authority}
-    return redirect(f"{urls['startpay']}{authority}", permanent=False)
+        if code != 100 or not authority:
+            return render(request, "payments/payment_error.html", {"order": order, "zarinpal": data})
+
+        order.payment_provider = "zarinpal"
+        order.payment_session_id = authority
+        order.save(update_fields=["payment_provider", "payment_session_id"])
+
+        return redirect(f"{urls['startpay']}{authority}", permanent=False)
 
 
 @require_GET
@@ -111,6 +135,16 @@ def zarinpal_callback(request):
         data = resp.json()
     except Exception:
         return render(request, "payments/zarinpal_result.html", {"ok": False, "order": order, "error": "NETWORK_ERROR"})
+    PaymentAttempt.objects.create(
+    order=order,
+    provider="zarinpal",
+    stage=PaymentAttempt.Stage.VERIFY,
+    authority=authority,
+    code=d.get("code") if isinstance(d.get("code"), int) else None,
+    ref_id=d.get("ref_id") if d.get("ref_id") else None,
+    raw=data,
+    )
+
 
     d = data.get("data") or {}
     code = d.get("code")

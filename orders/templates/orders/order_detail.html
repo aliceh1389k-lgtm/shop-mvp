@@ -30,6 +30,31 @@
 
     <hr />
     <p><strong>جمع کل:</strong> {{ computed_total|intcomma }} ریال</p>
+    <hr />
+<p><strong>جمع کل:</strong> {{ computed_total|intcomma }} ریال</p>
+
+{% if order.payment_provider %}
+  <p><strong>درگاه:</strong> {{ order.payment_provider }}</p>
+{% endif %}
+{% if order.payment_session_id %}
+  <p><strong>Authority:</strong> {{ order.payment_session_id }}</p>
+{% endif %}
+{% if order.payment_ref_id %}
+  <p><strong>RefID:</strong> {{ order.payment_ref_id }}</p>
+{% endif %}
+{% if order.paid_at %}
+  <p><strong>زمان پرداخت:</strong> {{ order.paid_at }}</p>
+{% endif %}
+
+{% if order.status == "PENDING_PAYMENT" %}
+  <form method="post" action="{% url 'payments:start' order_id=order.id %}">
+    {% csrf_token %}
+    <button type="submit">پرداخت</button>
+  </form>
+{% else %}
+  <p>این سفارش در وضعیت «{{ order.status }}» است و پرداخت فعال نیست.</p>
+{% endif %}
+
     <form method="post" action="{% url 'payments:start' order_id=order.id %}">
     {% csrf_token %}
     <button type="submit">پرداخت</button>
