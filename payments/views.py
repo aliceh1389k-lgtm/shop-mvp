@@ -135,6 +135,7 @@ def zarinpal_callback(request):
         data = resp.json()
     except Exception:
         return render(request, "payments/zarinpal_result.html", {"ok": False, "order": order, "error": "NETWORK_ERROR"})
+    
     PaymentAttempt.objects.create(
     order=order,
     provider="zarinpal",
