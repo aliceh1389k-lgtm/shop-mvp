@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>خطای پرداخت</title>
+  </head>
+  <body>
+    <h1>خطای پرداخت</h1>
+    <p>این سفارش قابل پرداخت نیست.</p>
+    <p>سفارش: {{ order.id }}</p>
+    <p>وضعیت: {{ order.status }}</p>
+
+    <a href="{% url 'orders:detail' order_id=order.id %}">بازگشت به سفارش</a>
+  </body>
+</html>

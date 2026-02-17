@@ -30,7 +30,10 @@
 
     <hr />
     <p><strong>جمع کل:</strong> {{ computed_total|intcomma }} ریال</p>
-
+    <form method="post" action="{% url 'payments:start' order_id=order.id %}">
+    {% csrf_token %}
+    <button type="submit">پرداخت</button>
+    </form>
     <p>(پرداخت هنوز فعال نشده — مرحله بعدی)</p>
   </body>
 </html>

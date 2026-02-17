@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>پرداخت (تستی)</title>
+  </head>
+  <body>
+    <h1>پرداخت (شبیه‌سازی)</h1>
+    <p>سفارش: {{ order.id }}</p>
+    <p>وضعیت فعلی: {{ order.status }}</p>
+
+    <p>فعلاً درگاه واقعی وصل نیست. مرحله بعدی اتصال به درگاه تست است.</p>
+
+    <a href="{% url 'orders:detail' order_id=order.id %}">بازگشت به سفارش</a>
+  </body>
+</html>
