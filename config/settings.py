@@ -128,3 +128,17 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+import os
+
+# Payments provider switch: "mock" or "stripe"
+PAYMENTS_PROVIDER = os.environ.get("PAYMENTS_PROVIDER", "mock").lower()
+
+# Stripe (test)
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_CURRENCY = os.environ.get("STRIPE_CURRENCY", "usd").lower()
+
+# چون قیمت داخلی ما IRR هست ولی Stripe ممکنه IRR رو پشتیبانی نکنه،
+# برای تست، تبدیل می‌کنیم به USD با یک نرخ تستی قابل تنظیم:
+TEST_IRR_PER_USD = int(os.environ.get("TEST_IRR_PER_USD", "500000"))
