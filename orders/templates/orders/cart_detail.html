@@ -1,0 +1,48 @@
+{% load humanize %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>سبد خرید</title>
+  </head>
+  <body>
+    <h1>سبد خرید</h1>
+
+    {% if items %}
+      <ul>
+        {% for item in items %}
+          <li>
+            <strong>{{ item.product.title }}</strong>
+            — قیمت: {{ item.product.price_irr|intcomma }} ریال
+            — جمع: {{ item.line_total_irr|intcomma }} ریال
+
+            <form method="post" action="{% url 'orders:cart_update' product_id=item.product.id %}">
+              {% csrf_token %}
+              <label>تعداد:</label>
+              <input type="number" name="quantity" value="{{ item.quantity }}" min="1" />
+              <button type="submit">به‌روزرسانی</button>
+            </form>
+
+            <form method="post" action="{% url 'orders:cart_remove' product_id=item.product.id %}">
+              {% csrf_token %}
+              <button type="submit">حذف</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <hr />
+      <p><strong>جمع کل:</strong> {{ total_irr|intcomma }} ریال</p>
+
+      <form method="post" action="{% url 'orders:checkout' %}">
+        {% csrf_token %}
+        <button type="submit">ادامه و ساخت سفارش</button>
+      </form>
+    {% else %}
+      <p>سبد خرید خالی است.</p>
+    {% endif %}
+
+    <hr />
+    <a href="{% url 'catalog:product_list' %}">بازگشت به محصولات</a>
+  </body>
+</html>

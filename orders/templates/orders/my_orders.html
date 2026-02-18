@@ -1,0 +1,48 @@
+{% load humanize %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>سفارش‌های من</title>
+  </head>
+
+  <body>
+    <header>
+      <h1>سفارش‌های من</h1>
+
+      <p>
+        <a href="{% url 'catalog:product_list' %}">محصولات</a>
+        |
+        <a href="{% url 'orders:cart_detail' %}">سبد خرید ({{ cart_count }})</a>
+        |
+        <a href="{% url 'orders:debug_dashboard' %}">دیباگ داشبورد</a>
+      </p>
+
+      <hr />
+    </header>
+
+    <main>
+      {% if orders %}
+        <ul>
+          {% for o in orders %}
+            <li style="margin-bottom: 12px;">
+              <a href="{% url 'orders:order_detail' order_id=o.id %}">سفارش {{ o.id }}</a>
+              <br />
+              وضعیت: <strong>{{ o.status }}</strong>
+              <br />
+              مبلغ: <strong>{{ o.total_irr|intcomma }}</strong> ریال
+              {% if o.status == "PAID" and o.payment_ref_id %}
+                <br />
+                کد رهگیری: <strong>{{ o.payment_ref_id }}</strong>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>هنوز هیچ سفارشی برای این مرورگر ثبت نشده است.</p>
+        <p><a href="{% url 'catalog:product_list' %}">رفتن به صفحه محصولات</a></p>
+      {% endif %}
+    </main>
+  </body>
+</html>

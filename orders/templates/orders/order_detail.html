@@ -3,62 +3,107 @@
 <html lang="fa" dir="rtl">
   <head>
     <meta charset="utf-8" />
-    <title>سفارش {{ order.id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>جزئیات سفارش</title>
+    <style>
+      body { font-family: sans-serif; margin: 24px; line-height: 1.9; }
+      .box { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 12px 0; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; }
+      .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; border: 1px solid #ccc; }
+      .ok { border-color: #1f7a1f; color: #1f7a1f; }
+      .warn { border-color: #b26b00; color: #b26b00; }
+      button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+      button[disabled] { opacity: .6; cursor: not-allowed; }
+      a { text-decoration: none; }
+      ul { padding-right: 18px; }
+      .muted { color: #666; }
+    </style>
   </head>
   <body>
-    <a href="{% url 'catalog:product_list' %}">بازگشت به محصولات</a>
 
-    <h1>سفارش</h1>
-    <p><strong>شناسه:</strong> {{ order.id }}</p>
-    <p><strong>وضعیت:</strong> {{ order.status }}</p>
+    <div class="row">
+      <a href="/products/"><button type="button">بازگشت به محصولات</button></a>
+      <a href="/orders/cart/"><button type="button">مشاهده سبد خرید</button></a>
+    </div>
 
-    <h2>آیتم‌ها</h2>
-    {% if items %}
-      <ul>
-        {% for item in items %}
-          <li>
-            {{ item.product.title }} —
-            تعداد: {{ item.quantity }} —
-            قیمت واحد: {{ item.unit_price_irr|intcomma }} ریال —
-            جمع: {{ item.line_total_irr|intcomma }} ریال
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>این سفارش آیتمی ندارد.</p>
+    <h1>جزئیات سفارش</h1>
+
+    <div class="box">
+      <div class="row">
+        <div><strong>شناسه سفارش:</strong> {{ order.id }}</div>
+        <div>
+          <strong>وضعیت:</strong>
+          {% if order.status == "PAID" %}
+            <span class="badge ok">پرداخت شده</span>
+          {% else %}
+            <span class="badge warn">{{ order.status }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <strong>مبلغ:</strong> {{ order.total_irr|intcomma }} ریال
+      </div>
+
+      {% if order.status == "PAID" %}
+        <div style="margin-top:10px;">
+          <strong>کد پیگیری:</strong>
+          {% if order.payment_ref_id %}
+            {{ order.payment_ref_id }}
+          {% else %}
+            <span class="muted">ثبت نشده</span>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="box">
+      <h2>اقلام سفارش</h2>
+
+      {% if items %}
+        <ul>
+          {% for it in items %}
+            <li>
+              <strong>{{ it.product.title }}</strong>
+              — تعداد: {{ it.qty|default:it.quantity }}
+              — قیمت واحد: {{ it.unit_price_irr|default:it.product.price_irr|intcomma }} ریال
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">اگر اقلام را نمی‌بینی، یعنی view شما کلید <code>items</code> را به template نمی‌فرستد. (در قدم 6.4 درستش می‌کنیم)</p>
+      {% endif %}
+    </div>
+
+    {% if order.status != "PAID" %}
+      <div class="box">
+        <h2>پرداخت</h2>
+
+        <form id="pay-form" method="post" action="{% url 'payments:start_payment' order_id=order.id %}">
+          {% csrf_token %}
+          <button id="pay-btn" type="submit">پرداخت با زرین‌پال</button>
+        </form>
+
+        <p class="muted" style="margin-top:8px;">
+          نکته: اگر چندبار کلیک کنی، سیستم ما دوباره درخواست جدید نمی‌زند (برای جلوگیری از خطای -12).
+        </p>
+      </div>
     {% endif %}
 
-    <hr />
-    <p><strong>جمع کل:</strong> {{ computed_total|intcomma }} ریال</p>
-    <hr />
-<p><strong>جمع کل:</strong> {{ computed_total|intcomma }} ریال</p>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("pay-form");
+        if (!form) return;
 
-{% if order.payment_provider %}
-  <p><strong>درگاه:</strong> {{ order.payment_provider }}</p>
-{% endif %}
-{% if order.payment_session_id %}
-  <p><strong>Authority:</strong> {{ order.payment_session_id }}</p>
-{% endif %}
-{% if order.payment_ref_id %}
-  <p><strong>RefID:</strong> {{ order.payment_ref_id }}</p>
-{% endif %}
-{% if order.paid_at %}
-  <p><strong>زمان پرداخت:</strong> {{ order.paid_at }}</p>
-{% endif %}
+        form.addEventListener("submit", () => {
+          const btn = document.getElementById("pay-btn");
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = "در حال انتقال به زرین‌پال...";
+          }
+        });
+      });
+    </script>
 
-{% if order.status == "PENDING_PAYMENT" %}
-  <form method="post" action="{% url 'payments:start' order_id=order.id %}">
-    {% csrf_token %}
-    <button type="submit">پرداخت</button>
-  </form>
-{% else %}
-  <p>این سفارش در وضعیت «{{ order.status }}» است و پرداخت فعال نیست.</p>
-{% endif %}
-
-    <form method="post" action="{% url 'payments:start' order_id=order.id %}">
-    {% csrf_token %}
-    <button type="submit">پرداخت</button>
-    </form>
-    <p>(پرداخت هنوز فعال نشده — مرحله بعدی)</p>
   </body>
 </html>
